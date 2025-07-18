@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Pattern Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #030712;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-muted: #6b7280;
+            --accent-color: #22d3ee;
+            --accent-hover: #06b6d4;
+            --solved-color: #22c55e;
+            --border-color: #374151;
+            --easy-color: #22c55e;
+            --medium-color: #f59e0b;
+            --hard-color: #ef4444;
+        }
+
+        html.light {
+            --bg-primary: #f9fafb;
+            --bg-secondary: #f3f4f6;
+            --bg-tertiary: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #374151;
+            --text-muted: #9ca3af;
+            --accent-color: #0891b2;
+            --accent-hover: #0e7490;
+            --solved-color: #16a34a;
+            --border-color: #e5e7eb;
+            --easy-color: #16a34a;
+            --medium-color: #f59e0b;
+            --hard-color: #dc2626;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        @import url('https://rsms.me/inter/inter.css');
+
+        summary {
+            cursor: pointer;
+            outline: none;
+            transition: color 0.2s ease-in-out;
+            list-style: none; /* Remove default marker */
+        }
+        summary::-webkit-details-marker {
+            display: none; /* Chrome */
+        }
+
+        summary:hover, details[open]>summary {
+            color: var(--accent-color);
+        }
+
+        .filter-btn.active {
+            background-color: var(--accent-color);
+            color: var(--bg-secondary);
+            font-weight: 700;
+        }
+        
+        .filter-btn:not(.active):hover {
+            background-color: var(--accent-hover);
+            color: var(--bg-primary);
+        }
+
+        .details-arrow {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        details[open] > summary .details-arrow {
+            transform: rotate(90deg);
+        }
+        
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in-up {
+            opacity: 0;
+            animation: fade-in-up 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl md:text-4xl font-bold text-[var(--text-primary)]">LeetCode Tracker</h1>
+                <button id="theme-toggle" class="p-2 rounded-full bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"></button>
+            </div>
+    
+            <div id="dashboard" class="mb-6"></div>
+    
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="search-input" placeholder="🔍 Search problems..." class="w-full p-3 rounded-lg bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] focus:border-[var(--accent-color)] focus:outline-none transition-colors">
+                <div id="filter-controls" class="flex items-center justify-center space-x-2 p-1 rounded-lg bg-[var(--bg-secondary)]">
+                    <button data-filter="all" class="filter-btn w-full p-2 rounded-md font-semibold transition-colors">All</button>
+                    <button data-filter="solved" class="filter-btn w-full p-2 rounded-md font-semibold transition-colors">Solved</button>
+                    <button data-filter="unsolved" class="filter-btn w-full p-2 rounded-md font-semibold transition-colors">Unsolved</button>
+                </div>
+            </div>
+        </header>
+
+        <main id="app-container" class="space-y-4"></main>
+    </div>
+
+    <script>
+         const leetcodeData =
+            [
+                {
+                    "category": "I. Two Pointer Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 1: Two Pointers - Converging (Sorted Array Target Sum)",
+                            "problems": [
+                                { "name": "1. Two Sum", "url": "https://leetcode.com/problems/two-sum/", "difficulty": "Easy" },
+                                { "name": "11. Container With Most Water", "url": "https://leetcode.com/problems/container-with-most-water/", "difficulty": "Medium" },
+                                { "name": "15. 3Sum", "url": "https://leetcode.com/problems/3sum/", "difficulty": "Medium" },
+                                { "name": "16. 3Sum Closest", "url": "https://leetcode.com/problems/3sum-closest/", "difficulty": "Medium" },
+                                { "name": "18. 4Sum", "url": "https://leetcode.com/problems/4sum/", "difficulty": "Medium" },
+                                { "name": "167. Two Sum II - Input Array Is Sorted", "url": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/", "difficulty": "Medium" },
+                                { "name": "349. Intersection of Two Arrays", "url": "https://leetcode.com/problems/intersection-of-two-arrays/", "difficulty": "Easy" },
+                                { "name": "881. Boats to Save People", "url": "https://leetcode.com/problems/boats-to-save-people/", "difficulty": "Medium" },
+                                { "name": "977. Squares of a Sorted Array", "url": "https://leetcode.com/problems/squares-of-a-sorted-array/", "difficulty": "Easy" },
+                                { "name": "259. 3Sum Smaller", "url": "https://leetcode.com/problems/3sum-smaller/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 2: Two Pointers - Fast & Slow (Cycle Detection)",
+                            "problems": [
+                                { "name": "141. Linked List Cycle", "url": "https://leetcode.com/problems/linked-list-cycle/", "difficulty": "Easy" },
+                                { "name": "202. Happy Number", "url": "https://leetcode.com/problems/happy-number/", "difficulty": "Easy" },
+                                { "name": "287. Find the Duplicate Number", "url": "https://leetcode.com/problems/find-the-duplicate-number/", "difficulty": "Medium" },
+                                { "name": "392. Is Subsequence", "url": "https://leetcode.com/problems/is-subsequence/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 3: Two Pointers - Fixed Separation (Nth Node from End)",
+                            "problems": [
+                                { "name": "19. Remove Nth Node From End of List", "url": "https://leetcode.com/problems/remove-nth-node-from-end-of-list/", "difficulty": "Medium" },
+                                { "name": "876. Middle of the Linked List", "url": "https://leetcode.com/problems/middle-of-the-linked-list/", "difficulty": "Easy" },
+                                { "name": "2095. Delete the Middle Node of a Linked List", "url": "https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 4: Two Pointers - In-place Array Modification",
+                            "problems": [
+                                { "name": "26. Remove Duplicates from Sorted Array", "url": "https://leetcode.com/problems/remove-duplicates-from-sorted-array/", "difficulty": "Easy" },
+                                { "name": "27. Remove Element", "url": "https://leetcode.com/problems/remove-element/", "difficulty": "Easy" },
+                                { "name": "75. Sort Colors", "url": "https://leetcode.com/problems/sort-colors/", "difficulty": "Medium" },
+                                { "name": "80. Remove Duplicates from Sorted Array II", "url": "https://leetcode.com/problems/remove-duplicates-from-sorted-array-ii/", "difficulty": "Medium" },
+                                { "name": "283. Move Zeroes", "url": "https://leetcode.com/problems/move-zeroes/", "difficulty": "Easy" },
+                                { "name": "443. String Compression", "url": "https://leetcode.com/problems/string-compression/", "difficulty": "Medium" },
+                                { "name": "905. Sort Array By Parity", "url": "https://leetcode.com/problems/sort-array-by-parity/", "difficulty": "Easy" },
+                                { "name": "2337. Move Pieces to Obtain a String", "url": "https://leetcode.com/problems/move-pieces-to-obtain-a-string/", "difficulty": "Medium" },
+                                { "name": "2938. Separate Black and White Balls", "url": "https://leetcode.com/problems/separate-black-and-white-balls/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 5: Two Pointers - String Comparison with Backspaces",
+                            "problems": [
+                                { "name": "844. Backspace String Compare", "url": "https://leetcode.com/problems/backspace-string-compare/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 6: Two Pointers - Expanding From Center (Palindromes)",
+                            "problems": [
+                                { "name": "5. Longest Palindromic Substring", "url": "https://leetcode.com/problems/longest-palindromic-substring/", "difficulty": "Medium" },
+                                { "name": "647. Palindromic Substrings", "url": "https://leetcode.com/problems/palindromic-substrings/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 7: Two Pointers - String Reversal",
+                            "problems": [
+                                { "name": "151. Reverse Words in a String", "url": "https://leetcode.com/problems/reverse-words-in-a-string/", "difficulty": "Medium" },
+                                { "name": "344. Reverse String", "url": "https://leetcode.com/problems/reverse-string/", "difficulty": "Easy" },
+                                { "name": "345. Reverse Vowels of a String", "url": "https://leetcode.com/problems/reverse-vowels-of-a-string/", "difficulty": "Easy" },
+                                { "name": "541. Reverse String II", "url": "https://leetcode.com/problems/reverse-string-ii/", "difficulty": "Easy" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "II. Sliding Window Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 8: Sliding Window - Fixed Size (Subarray Calculation)",
+                            "problems": [
+                                { "name": "346. Moving Average from Data Stream", "url": "https://leetcode.com/problems/moving-average-from-data-stream/", "difficulty": "Easy" },
+                                { "name": "643. Maximum Average Subarray I", "url": "https://leetcode.com/problems/maximum-average-subarray-i/", "difficulty": "Easy" },
+                                { "name": "2985. Calculate Compressed Mean", "url": "https://leetcode.com/problems/calculate-compressed-mean/", "difficulty": "Easy" },
+                                { "name": "3254. Find the Power of K-Size Subarrays I", "url": "https://leetcode.com/problems/find-the-power-of-k-size-subarrays-i/", "difficulty": "Medium" },
+                                { "name": "3318. Find X-Sum of All K-Long Subarrays I", "url": "https://leetcode.com/problems/find-x-sum-of-all-k-long-subarrays-i/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 9: Sliding Window - Variable Size (Condition-Based)",
+                            "problems": [
+                                { "name": "3. Longest Substring Without Repeating Characters", "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/", "difficulty": "Medium" },
+                                { "name": "76. Minimum Window Substring", "url": "https://leetcode.com/problems/minimum-window-substring/", "difficulty": "Hard" },
+                                { "name": "209. Minimum Size Subarray Sum", "url": "https://leetcode.com/problems/minimum-size-subarray-sum/", "difficulty": "Medium" },
+                                { "name": "219. Contains Duplicate II", "url": "https://leetcode.com/problems/contains-duplicate-ii/", "difficulty": "Easy" },
+                                { "name": "424. Longest Repeating Character Replacement", "url": "https://leetcode.com/problems/longest-repeating-character-replacement/", "difficulty": "Medium" },
+                                { "name": "713. Subarray Product Less Than K", "url": "https://leetcode.com/problems/subarray-product-less-than-k/", "difficulty": "Medium" },
+                                { "name": "904. Fruit Into Baskets", "url": "https://leetcode.com/problems/fruit-into-baskets/", "difficulty": "Medium" },
+                                { "name": "1004. Max Consecutive Ones III", "url": "https://leetcode.com/problems/max-consecutive-ones-iii/", "difficulty": "Medium" },
+                                { "name": "1438. Longest Continuous Subarray With Absolute Diff Less Than or Equal to Limit", "url": "https://leetcode.com/problems/longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit/", "difficulty": "Medium" },
+                                { "name": "1493. Longest Subarray of 1's After Deleting One Element", "url": "https://leetcode.com/problems/longest-subarray-of-1s-after-deleting-one-element/", "difficulty": "Medium" },
+                                { "name": "1658. Minimum Operations to Reduce X to Zero", "url": "https://leetcode.com/problems/minimum-operations-to-reduce-x-to-zero/", "difficulty": "Medium" },
+                                { "name": "1838. Frequency of the Most Frequent Element", "url": "https://leetcode.com/problems/frequency-of-the-most-frequent-element/", "difficulty": "Medium" },
+                                { "name": "2461. Maximum Sum of Distinct Subarrays With Length K", "url": "https://leetcode.com/problems/maximum-sum-of-distinct-subarrays-with-length-k/", "difficulty": "Medium" },
+                                { "name": "2516. Take K of Each Character From Left and Right", "url": "https://leetcode.com/problems/take-k-of-each-character-from-left-and-right/", "difficulty": "Medium" },
+                                { "name": "2762. Continuous Subarrays", "url": "https://leetcode.com/problems/continuous-subarrays/", "difficulty": "Medium" },
+                                { "name": "2779. Maximum Beauty of an Array After Applying Operation", "url": "https://leetcode.com/problems/maximum-beauty-of-an-array-after-applying-operation/", "difficulty": "Medium" },
+                                { "name": "2981. Find Longest Special Substring That Occurs Thrice I", "url": "https://leetcode.com/problems/find-longest-special-substring-that-occurs-thrice-i/", "difficulty": "Medium" },
+                                { "name": "3026. Maximum Good Subarray Sum", "url": "https://leetcode.com/problems/maximum-good-subarray-sum/", "difficulty": "Medium" },
+                                { "name": "3346. Maximum Frequency of an Element After Performing Operations I", "url": "https://leetcode.com/problems/maximum-frequency-of-an-element-after-performing-operations-i/", "difficulty": "Medium" },
+                                { "name": "3347. Maximum Frequency of an Element After Performing Operations II", "url": "https://leetcode.com/problems/maximum-frequency-of-an-element-after-performing-operations-ii/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 10: Sliding Window - Monotonic Queue for Max/Min",
+                            "problems": [
+                                { "name": "239. Sliding Window Maximum", "url": "https://leetcode.com/problems/sliding-window-maximum/", "difficulty": "Hard" },
+                                { "name": "862. Shortest Subarray with Sum at Least K", "url": "https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/", "difficulty": "Hard" },
+                                { "name": "1696. Jump Game VI", "url": "https://leetcode.com/problems/jump-game-vi/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 11: Sliding Window - Character Frequency Matching",
+                            "problems": [
+                                { "name": "438. Find All Anagrams in a String", "url": "https://leetcode.com/problems/find-all-anagrams-in-a-string/", "difficulty": "Medium" },
+                                { "name": "567. Permutation in String", "url": "https://leetcode.com/problems/permutation-in-string/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "III. Tree Traversal Patterns (DFS & BFS)",
+                    "patterns": [
+                        {
+                            "name": "Pattern 12: Tree BFS - Level Order Traversal",
+                            "problems": [
+                                { "name": "102. Binary Tree Level Order Traversal", "url": "https://leetcode.com/problems/binary-tree-level-order-traversal/", "difficulty": "Medium" },
+                                { "name": "103. Binary Tree Zigzag Level Order Traversal", "url": "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/", "difficulty": "Medium" },
+                                { "name": "199. Binary Tree Right Side View", "url": "https://leetcode.com/problems/binary-tree-right-side-view/", "difficulty": "Medium" },
+                                { "name": "515. Find Largest Value in Each Tree Row", "url": "https://leetcode.com/problems/find-largest-value-in-each-tree-row/", "difficulty": "Medium" },
+                                { "name": "1161. Maximum Level Sum of a Binary Tree", "url": "https://leetcode.com/problems/maximum-level-sum-of-a-binary-tree/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 13: Tree DFS - Recursive Preorder Traversal",
+                            "problems": [
+                                { "name": "100. Same Tree", "url": "https://leetcode.com/problems/same-tree/", "difficulty": "Easy" },
+                                { "name": "101. Symmetric Tree", "url": "https://leetcode.com/problems/symmetric-tree/", "difficulty": "Easy" },
+                                { "name": "105. Construct Binary Tree from Preorder and Inorder Traversal", "url": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/", "difficulty": "Medium" },
+                                { "name": "114. Flatten Binary Tree to Linked List", "url": "https://leetcode.com/problems/flatten-binary-tree-to-linked-list/", "difficulty": "Medium" },
+                                { "name": "226. Invert Binary Tree", "url": "https://leetcode.com/problems/invert-binary-tree/", "difficulty": "Easy" },
+                                { "name": "257. Binary Tree Paths", "url": "https://leetcode.com/problems/binary-tree-paths/", "difficulty": "Easy" },
+                                { "name": "988. Smallest String Starting From Leaf", "url": "https://leetcode.com/problems/smallest-string-starting-from-leaf/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 14: Tree DFS - Recursive Inorder Traversal",
+                            "problems": [
+                                { "name": "94. Binary Tree Inorder Traversal", "url": "https://leetcode.com/problems/binary-tree-inorder-traversal/", "difficulty": "Easy" },
+                                { "name": "98. Validate Binary Search Tree", "url": "https://leetcode.com/problems/validate-binary-search-tree/", "difficulty": "Medium" },
+                                { "name": "173. Binary Search Tree Iterator", "url": "https://leetcode.com/problems/binary-search-tree-iterator/", "difficulty": "Medium" },
+                                { "name": "230. Kth Smallest Element in a BST", "url": "https://leetcode.com/problems/kth-smallest-element-in-a-bst/", "difficulty": "Medium" },
+                                { "name": "501. Find Mode in Binary Search Tree", "url": "https://leetcode.com/problems/find-mode-in-binary-search-tree/", "difficulty": "Easy" },
+                                { "name": "530. Minimum Absolute Difference in BST", "url": "https://leetcode.com/problems/minimum-absolute-difference-in-bst/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 15: Tree DFS - Recursive Postorder Traversal",
+                            "problems": [
+                                { "name": "104. Maximum Depth of Binary Tree", "url": "https://leetcode.com/problems/maximum-depth-of-binary-tree/", "difficulty": "Easy" },
+                                { "name": "110. Balanced Binary Tree", "url": "https://leetcode.com/problems/balanced-binary-tree/", "difficulty": "Easy" },
+                                { "name": "124. Binary Tree Maximum Path Sum", "url": "https://leetcode.com/problems/binary-tree-maximum-path-sum/", "difficulty": "Hard" },
+                                { "name": "145. Binary Tree Postorder Traversal", "url": "https://leetcode.com/problems/binary-tree-postorder-traversal/", "difficulty": "Easy" },
+                                { "name": "337. House Robber III", "url": "https://leetcode.com/problems/house-robber-iii/", "difficulty": "Medium" },
+                                { "name": "366. Find Leaves of Binary Tree", "url": "https://leetcode.com/problems/find-leaves-of-binary-tree/", "difficulty": "Medium" },
+                                { "name": "543. Diameter of Binary Tree", "url": "https://leetcode.com/problems/diameter-of-binary-tree/", "difficulty": "Easy" },
+                                { "name": "863. All Nodes Distance K in Binary Tree", "url": "https://leetcode.com/problems/all-nodes-distance-k-in-binary-tree/", "difficulty": "Medium" },
+                                { "name": "1110. Delete Nodes And Return Forest", "url": "https://leetcode.com/problems/delete-nodes-and-return-forest/", "difficulty": "Medium" },
+                                { "name": "2458. Height of Binary Tree After Subtree Removal Queries", "url": "https://leetcode.com/problems/height-of-binary-tree-after-subtree-removal-queries/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 17: Tree - Lowest Common Ancestor (LCA) Finding",
+                            "problems": [
+                                { "name": "235. Lowest Common Ancestor of a Binary Search Tree", "url": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/", "difficulty": "Medium" },
+                                { "name": "236. Lowest Common Ancestor of a Binary Tree", "url": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 18: Tree - Serialization and Deserialization",
+                            "problems": [
+                                { "name": "297. Serialize and Deserialize Binary Tree", "url": "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/", "difficulty": "Hard" },
+                                { "name": "572. Subtree of Another Tree", "url": "https://leetcode.com/problems/subtree-of-another-tree/", "difficulty": "Easy" },
+                                { "name": "652. Find Duplicate Subtrees", "url": "https://leetcode.com/problems/find-duplicate-subtrees/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "IV. Graph Traversal Patterns (DFS & BFS)",
+                    "patterns": [
+                        {
+                            "name": "Pattern 19: Graph DFS - Connected Components / Island Counting",
+                            "problems": [
+                                { "name": "130. Surrounded Regions", "url": "https://leetcode.com/problems/surrounded-regions/", "difficulty": "Medium" },
+                                { "name": "200. Number of Islands", "url": "https://leetcode.com/problems/number-of-islands/", "difficulty": "Medium" },
+                                { "name": "417. Pacific Atlantic Water Flow", "url": "https://leetcode.com/problems/pacific-atlantic-water-flow/", "difficulty": "Medium" },
+                                { "name": "547. Number of Provinces", "url": "https://leetcode.com/problems/number-of-provinces/", "difficulty": "Medium" },
+                                { "name": "695. Max Area of Island", "url": "https://leetcode.com/problems/max-area-of-island/", "difficulty": "Medium" },
+                                { "name": "733. Flood Fill", "url": "https://leetcode.com/problems/flood-fill/", "difficulty": "Easy" },
+                                { "name": "841. Keys and Rooms", "url": "https://leetcode.com/problems/keys-and-rooms/", "difficulty": "Medium" },
+                                { "name": "1020. Number of Enclaves", "url": "https://leetcode.com/problems/number-of-enclaves/", "difficulty": "Medium" },
+                                { "name": "1254. Number of Closed Islands", "url": "https://leetcode.com/problems/number-of-closed-islands/", "difficulty": "Medium" },
+                                { "name": "1905. Count Sub Islands", "url": "https://leetcode.com/problems/count-sub-islands/", "difficulty": "Medium" },
+                                { "name": "2101. Detonate the Maximum Bombs", "url": "https://leetcode.com/problems/detonate-the-maximum-bombs/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 20: Graph BFS - Connected Components / Island Counting",
+                            "problems": [
+                                { "name": "127. Word Ladder", "url": "https://leetcode.com/problems/word-ladder/", "difficulty": "Hard" },
+                                { "name": "542. 01 Matrix", "url": "https://leetcode.com/problems/01-matrix/", "difficulty": "Medium" },
+                                { "name": "994. Rotting Oranges", "url": "https://leetcode.com/problems/rotting-oranges/", "difficulty": "Medium" },
+                                { "name": "1091. Shortest Path in Binary Matrix", "url": "https://leetcode.com/problems/shortest-path-in-binary-matrix/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 21: Graph DFS - Cycle Detection (Directed Graph)",
+                            "problems": [
+                                { "name": "207. Course Schedule", "url": "https://leetcode.com/problems/course-schedule/", "difficulty": "Medium" },
+                                { "name": "210. Course Schedule II", "url": "https://leetcode.com/problems/course-schedule-ii/", "difficulty": "Medium" },
+                                { "name": "802. Find Eventual Safe States", "url": "https://leetcode.com/problems/find-eventual-safe-states/", "difficulty": "Medium" },
+                                { "name": "1059. All Paths from Source Lead to Destination", "url": "https://leetcode.com/problems/all-paths-from-source-lead-to-destination/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 22: Graph BFS - Topological Sort (Kahn's Algorithm)",
+                            "problems": [
+                                { "name": "207. Course Schedule", "url": "https://leetcode.com/problems/course-schedule/", "difficulty": "Medium" },
+                                { "name": "210. Course Schedule II", "url": "https://leetcode.com/problems/course-schedule-ii/", "difficulty": "Medium" },
+                                { "name": "269. Alien Dictionary", "url": "https://leetcode.com/problems/alien-dictionary/", "difficulty": "Hard" },
+                                { "name": "310. Minimum Height Trees", "url": "https://leetcode.com/problems/minimum-height-trees/", "difficulty": "Medium" },
+                                { "name": "444. Sequence Reconstruction", "url": "https://leetcode.com/problems/sequence-reconstruction/", "difficulty": "Medium" },
+                                { "name": "1136. Parallel Courses", "url": "https://leetcode.com/problems/parallel-courses/", "difficulty": "Medium" },
+                                { "name": "1857. Largest Color Value in a Directed Graph", "url": "https://leetcode.com/problems/largest-color-value-in-a-directed-graph/", "difficulty": "Hard" },
+                                { "name": "2050. Parallel Courses III", "url": "https://leetcode.com/problems/parallel-courses-iii/", "difficulty": "Hard" },
+                                { "name": "2115. Find All Possible Recipes from Given Supplies", "url": "https://leetcode.com/problems/find-all-possible-recipes-from-given-supplies/", "difficulty": "Medium" },
+                                { "name": "2392. Build a Matrix With Conditions", "url": "https://leetcode.com/problems/build-a-matrix-with-conditions/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 23: Graph - Deep Copy / Cloning",
+                            "problems": [
+                                { "name": "133. Clone Graph", "url": "https://leetcode.com/problems/clone-graph/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 24: Graph - Shortest Path (Dijkstra's Algorithm)",
+                            "problems": [
+                                { "name": "743. Network Delay Time", "url": "https://leetcode.com/problems/network-delay-time/", "difficulty": "Medium" },
+                                { "name": "778. Swim in Rising Water", "url": "https://leetcode.com/problems/swim-in-rising-water/", "difficulty": "Hard" },
+                                { "name": "1514. Path with Maximum Probability", "url": "https://leetcode.com/problems/path-with-maximum-probability/", "difficulty": "Medium" },
+                                { "name": "1631. Path With Minimum Effort", "url": "https://leetcode.com/problems/path-with-minimum-effort/", "difficulty": "Medium" },
+                                { "name": "1976. Number of Ways to Arrive at Destination", "url": "https://leetcode.com/problems/number-of-ways-to-arrive-at-destination/", "difficulty": "Medium" },
+                                { "name": "2045. Second Minimum Time to Reach Destination", "url": "https://leetcode.com/problems/second-minimum-time-to-reach-destination/", "difficulty": "Hard" },
+                                { "name": "2203. Minimum Weighted Subgraph With the Required Paths", "url": "https://leetcode.com/problems/minimum-weighted-subgraph-with-the-required-paths/", "difficulty": "Hard" },
+                                { "name": "2290. Minimum Obstacle Removal to Reach Corner", "url": "https://leetcode.com/problems/minimum-obstacle-removal-to-reach-corner/", "difficulty": "Hard" },
+                                { "name": "2577. Minimum Time to Visit a Cell In a Grid", "url": "https://leetcode.com/problems/minimum-time-to-visit-a-cell-in-a-grid/", "difficulty": "Hard" },
+                                { "name": "2812. Find the Safest Path in a Grid", "url": "https://leetcode.com/problems/find-the-safest-path-in-a-grid/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 25: Graph - Shortest Path (Bellman-Ford / BFS+K)",
+                            "problems": [
+                                { "name": "787. Cheapest Flights Within K Stops", "url": "https://leetcode.com/problems/cheapest-flights-within-k-stops/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 26: Graph - Union-Find (Disjoint Set Union - DSU)",
+                            "problems": [
+                                { "name": "200. Number of Islands", "url": "https://leetcode.com/problems/number-of-islands/", "difficulty": "Medium" },
+                                { "name": "261. Graph Valid Tree", "url": "https://leetcode.com/problems/graph-valid-tree/", "difficulty": "Medium" },
+                                { "name": "305. Number of Islands II", "url": "https://leetcode.com/problems/number-of-islands-ii/", "difficulty": "Hard" },
+                                { "name": "323. Number of Connected Components in an Undirected Graph", "url": "https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/", "difficulty": "Medium" },
+                                { "name": "547. Number of Provinces", "url": "https://leetcode.com/problems/number-of-provinces/", "difficulty": "Medium" },
+                                { "name": "684. Redundant Connection", "url": "https://leetcode.com/problems/redundant-connection/", "difficulty": "Medium" },
+                                { "name": "721. Accounts Merge", "url": "https://leetcode.com/problems/accounts-merge/", "difficulty": "Medium" },
+                                { "name": "737. Sentence Similarity II", "url": "https://leetcode.com/problems/sentence-similarity-ii/", "difficulty": "Medium" },
+                                { "name": "947. Most Stones Removed with Same Row or Column", "url": "https://leetcode.com/problems/most-stones-removed-with-same-row-or-column/", "difficulty": "Medium" },
+                                { "name": "952. Largest Component Size by Common Factor", "url": "https://leetcode.com/problems/largest-component-size-by-common-factor/", "difficulty": "Hard" },
+                                { "name": "959. Regions Cut By Slashes", "url": "https://leetcode.com/problems/regions-cut-by-slashes/", "difficulty": "Medium" },
+                                { "name": "1101. The Earliest Moment When Everyone Become Friends", "url": "https://leetcode.com/problems/the-earliest-moment-when-everyone-become-friends/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "V. Dynamic Programming (DP) Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 27: DP - 1D Array (Fibonacci Style)",
+                            "problems": [
+                                { "name": "70. Climbing Stairs", "url": "https://leetcode.com/problems/climbing-stairs/", "difficulty": "Easy" },
+                                { "name": "91. Decode Ways", "url": "https://leetcode.com/problems/decode-ways/", "difficulty": "Medium" },
+                                { "name": "198. House Robber", "url": "https://leetcode.com/problems/house-robber/", "difficulty": "Medium" },
+                                { "name": "213. House Robber II", "url": "https://leetcode.com/problems/house-robber-ii/", "difficulty": "Medium" },
+                                { "name": "337. House Robber III", "url": "https://leetcode.com/problems/house-robber-iii/", "difficulty": "Medium" },
+                                { "name": "509. Fibonacci Number", "url": "https://leetcode.com/problems/fibonacci-number/", "difficulty": "Easy" },
+                                { "name": "740. Delete and Earn", "url": "https://leetcode.com/problems/delete-and-earn/", "difficulty": "Medium" },
+                                { "name": "746. Min Cost Climbing Stairs", "url": "https://leetcode.com/problems/min-cost-climbing-stairs/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 28: DP - 1D Array (Kadane's Algorithm for Max/Min Subarray)",
+                            "problems": [
+                                { "name": "53. Maximum Subarray", "url": "https://leetcode.com/problems/maximum-subarray/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 29: DP - 1D Array (Coin Change / Unbounded Knapsack Style)",
+                            "problems": [
+                                { "name": "322. Coin Change", "url": "https://leetcode.com/problems/coin-change/", "difficulty": "Medium" },
+                                { "name": "377. Combination Sum IV", "url": "https://leetcode.com/problems/combination-sum-iv/", "difficulty": "Medium" },
+                                { "name": "518. Coin Change II", "url": "https://leetcode.com/problems/coin-change-ii/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 30: DP - 1D Array (0/1 Knapsack Subset Sum Style)",
+                            "problems": [
+                                { "name": "416. Partition Equal Subset Sum", "url": "https://leetcode.com/problems/partition-equal-subset-sum/", "difficulty": "Medium" },
+                                { "name": "494. Target Sum", "url": "https://leetcode.com/problems/target-sum/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 31: DP - 1D Array (Word Break Style)",
+                            "problems": [
+                                { "name": "139. Word Break", "url": "https://leetcode.com/problems/word-break/", "difficulty": "Medium" },
+                                { "name": "140. Word Break II", "url": "https://leetcode.com/problems/word-break-ii/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 32: DP - 2D Array (Longest Common Subsequence - LCS)",
+                            "problems": [
+                                { "name": "583. Delete Operation for Two Strings", "url": "https://leetcode.com/problems/delete-operation-for-two-strings/", "difficulty": "Medium" },
+                                { "name": "1143. Longest Common Subsequence", "url": "https://leetcode.com/problems/longest-common-subsequence/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 33: DP - 2D Array (Edit Distance / Levenshtein Distance)",
+                            "problems": [
+                                { "name": "72. Edit Distance", "url": "https://leetcode.com/problems/edit-distance/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 34: DP - 2D Array (Unique Paths on Grid)",
+                            "problems": [
+                                { "name": "62. Unique Paths", "url": "https://leetcode.com/problems/unique-paths/", "difficulty": "Medium" },
+                                { "name": "63. Unique Paths II", "url": "https://leetcode.com/problems/unique-paths-ii/", "difficulty": "Medium" },
+                                { "name": "64. Minimum Path Sum", "url": "https://leetcode.com/problems/minimum-path-sum/", "difficulty": "Medium" },
+                                { "name": "120. Triangle", "url": "https://leetcode.com/problems/triangle/", "difficulty": "Medium" },
+                                { "name": "221. Maximal Square", "url": "https://leetcode.com/problems/maximal-square/", "difficulty": "Medium" },
+                                { "name": "931. Minimum Falling Path Sum", "url": "https://leetcode.com/problems/minimum-falling-path-sum/", "difficulty": "Medium" },
+                                { "name": "1277. Count Square Submatrices with All Ones", "url": "https://leetcode.com/problems/count-square-submatrices-with-all-ones/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 35: DP - Interval DP",
+                            "problems": [
+                                { "name": "312. Burst Balloons", "url": "https://leetcode.com/problems/burst-balloons/", "difficulty": "Hard" },
+                                { "name": "546. Remove Boxes", "url": "https://leetcode.com/problems/remove-boxes/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 36: DP - Catalan Numbers",
+                            "problems": [
+                                { "name": "95. Unique Binary Search Trees II", "url": "https://leetcode.com/problems/unique-binary-search-trees-ii/", "difficulty": "Medium" },
+                                { "name": "96. Unique Binary Search Trees", "url": "https://leetcode.com/problems/unique-binary-search-trees/", "difficulty": "Medium" },
+                                { "name": "241. Different Ways to Add Parentheses", "url": "https://leetcode.com/problems/different-ways-to-add-parentheses/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 37: DP - Longest Increasing Subsequence (LIS)",
+                            "problems": [
+                                { "name": "300. Longest Increasing Subsequence", "url": "https://leetcode.com/problems/longest-increasing-subsequence/", "difficulty": "Medium" },
+                                { "name": "354. Russian Doll Envelopes", "url": "https://leetcode.com/problems/russian-doll-envelopes/", "difficulty": "Hard" },
+                                { "name": "1671. Minimum Number of Removals to Make Mountain Array", "url": "https://leetcode.com/problems/minimum-number-of-removals-to-make-mountain-array/", "difficulty": "Hard" },
+                                { "name": "2407. Longest Increasing Subsequence II", "url": "https://leetcode.com/problems/longest-increasing-subsequence-ii/", "difficulty": "Hard" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "VI. Heap (Priority Queue) Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 38: Heap - Top K Elements (Selection/Frequency)",
+                            "problems": [
+                                { "name": "215. Kth Largest Element in an Array", "url": "https://leetcode.com/problems/kth-largest-element-in-an-array/", "difficulty": "Medium" },
+                                { "name": "347. Top K Frequent Elements", "url": "https://leetcode.com/problems/top-k-frequent-elements/", "difficulty": "Medium" },
+                                { "name": "451. Sort Characters By Frequency", "url": "https://leetcode.com/problems/sort-characters-by-frequency/", "difficulty": "Medium" },
+                                { "name": "506. Relative Ranks", "url": "https://leetcode.com/problems/relative-ranks/", "difficulty": "Easy" },
+                                { "name": "703. Kth Largest Element in a Stream", "url": "https://leetcode.com/problems/kth-largest-element-in-a-stream/", "difficulty": "Easy" },
+                                { "name": "973. K Closest Points to Origin", "url": "https://leetcode.com/problems/k-closest-points-to-origin/", "difficulty": "Medium" },
+                                { "name": "1046. Last Stone Weight", "url": "https://leetcode.com/problems/last-stone-weight/", "difficulty": "Easy" },
+                                { "name": "2558. Take Gifts From the Richest Pile", "url": "https://leetcode.com/problems/take-gifts-from-the-richest-pile/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 39: Heap - Two Heaps for Median Finding",
+                            "problems": [
+                                { "name": "295. Find Median from Data Stream", "url": "https://leetcode.com/problems/find-median-from-data-stream/", "difficulty": "Hard" },
+                                { "name": "1825. Finding MK Average", "url": "https://leetcode.com/problems/finding-mk-average/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 40: Heap - K-way Merge",
+                            "problems": [
+                                { "name": "23. Merge k Sorted Lists", "url": "https://leetcode.com/problems/merge-k-sorted-lists/", "difficulty": "Hard" },
+                                { "name": "373. Find K Pairs with Smallest Sums", "url": "https://leetcode.com/problems/find-k-pairs-with-smallest-sums/", "difficulty": "Medium" },
+                                { "name": "378. Kth Smallest Element in a Sorted Matrix", "url": "https://leetcode.com/problems/kth-smallest-element-in-a-sorted-matrix/", "difficulty": "Medium" },
+                                { "name": "632. Smallest Range Covering Elements from K Lists", "url": "https://leetcode.com/problems/smallest-range-covering-elements-from-k-lists/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 41: Heap - Scheduling / Minimum Cost (Greedy with Priority Queue)",
+                            "problems": [
+                                { "name": "253. Meeting Rooms II", "url": "https://leetcode.com/problems/meeting-rooms-ii/", "difficulty": "Medium" },
+                                { "name": "767. Reorganize String", "url": "https://leetcode.com/problems/reorganize-string/", "difficulty": "Medium" },
+                                { "name": "857. Minimum Cost to Hire K Workers", "url": "https://leetcode.com/problems/minimum-cost-to-hire-k-workers/", "difficulty": "Hard" },
+                                { "name": "1642. Furthest Building You Can Reach", "url": "https://leetcode.com/problems/furthest-building-you-can-reach/", "difficulty": "Medium" },
+                                { "name": "1792. Maximum Average Pass Ratio", "url": "https://leetcode.com/problems/maximum-average-pass-ratio/", "difficulty": "Medium" },
+                                { "name": "1834. Single-Threaded CPU", "url": "https://leetcode.com/problems/single-threaded-cpu/", "difficulty": "Medium" },
+                                { "name": "1942. The Number of the Smallest Unoccupied Chair", "url": "https://leetcode.com/problems/the-number-of-the-smallest-unoccupied-chair/", "difficulty": "Medium" },
+                                { "name": "2402. Meeting Rooms III", "url": "https://leetcode.com/problems/meeting-rooms-iii/", "difficulty": "Hard" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "VII. Backtracking Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 42: Backtracking - Subsets (Include/Exclude)",
+                            "problems": [
+                                { "name": "17. Letter Combinations of a Phone Number", "url": "https://leetcode.com/problems/letter-combinations-of-a-phone-number/", "difficulty": "Medium" },
+                                { "name": "77. Combinations", "url": "https://leetcode.com/problems/combinations/", "difficulty": "Medium" },
+                                { "name": "78. Subsets", "url": "https://leetcode.com/problems/subsets/", "difficulty": "Medium" },
+                                { "name": "90. Subsets II", "url": "https://leetcode.com/problems/subsets-ii/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 43: Backtracking - Permutations",
+                            "problems": [
+                                { "name": "31. Next Permutation", "url": "https://leetcode.com/problems/next-permutation/", "difficulty": "Medium" },
+                                { "name": "46. Permutations", "url": "https://leetcode.com/problems/permutations/", "difficulty": "Medium" },
+                                { "name": "60. Permutation Sequence", "url": "https://leetcode.com/problems/permutation-sequence/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 44: Backtracking - Combination Sum",
+                            "problems": [
+                                { "name": "39. Combination Sum", "url": "https://leetcode.com/problems/combination-sum/", "difficulty": "Medium" },
+                                { "name": "40. Combination Sum II", "url": "https://leetcode.com/problems/combination-sum-ii/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 45: Backtracking - Parentheses Generation",
+                            "problems": [
+                                { "name": "22. Generate Parentheses", "url": "https://leetcode.com/problems/generate-parentheses/", "difficulty": "Medium" },
+                                { "name": "301. Remove Invalid Parentheses", "url": "https://leetcode.com/problems/remove-invalid-parentheses/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 46: Backtracking - Word Search / Path Finding in Grid",
+                            "problems": [
+                                { "name": "79. Word Search", "url": "https://leetcode.com/problems/word-search/", "difficulty": "Medium" },
+                                { "name": "212. Word Search II", "url": "https://leetcode.com/problems/word-search-ii/", "difficulty": "Hard" },
+                                { "name": "2018. Check if Word Can Be Placed In Crossword", "url": "https://leetcode.com/problems/check-if-word-can-be-placed-in-crossword/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 47: Backtracking - N-Queens / Constraint Satisfaction",
+                            "problems": [
+                                { "name": "37. Sudoku Solver", "url": "https://leetcode.com/problems/sudoku-solver/", "difficulty": "Hard" },
+                                { "name": "51. N-Queens", "url": "https://leetcode.com/problems/n-queens/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 48: Backtracking - Palindrome Partitioning",
+                            "problems": [
+                                { "name": "131. Palindrome Partitioning", "url": "https://leetcode.com/problems/palindrome-partitioning/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "VIII. Greedy Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 49: Greedy - Interval Merging/Scheduling",
+                            "problems": [
+                                { "name": "56. Merge Intervals", "url": "https://leetcode.com/problems/merge-intervals/", "difficulty": "Medium" },
+                                { "name": "57. Insert Interval", "url": "https://leetcode.com/problems/insert-interval/", "difficulty": "Medium" },
+                                { "name": "759. Employee Free Time", "url": "https://leetcode.com/problems/employee-free-time/", "difficulty": "Hard" },
+                                { "name": "986. Interval List Intersections", "url": "https://leetcode.com/problems/interval-list-intersections/", "difficulty": "Medium" },
+                                { "name": "2406. Divide Intervals Into Minimum Number of Groups", "url": "https://leetcode.com/problems/divide-intervals-into-minimum-number-of-groups/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 51: Greedy - Jump Game Reachability/Minimization",
+                            "problems": [
+                                { "name": "45. Jump Game II", "url": "https://leetcode.com/problems/jump-game-ii/", "difficulty": "Medium" },
+                                { "name": "55. Jump Game", "url": "https://leetcode.com/problems/jump-game/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 52: Greedy - Buy/Sell Stock",
+                            "problems": [
+                                { "name": "121. Best Time to Buy and Sell Stock", "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/", "difficulty": "Easy" },
+                                { "name": "122. Best Time to Buy and Sell Stock II", "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 53: Greedy - Gas Station Circuit",
+                            "problems": [
+                                { "name": "134. Gas Station", "url": "https://leetcode.com/problems/gas-station/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 54: Greedy - Task Scheduling (Frequency Based)",
+                            "problems": [
+                                { "name": "621. Task Scheduler", "url": "https://leetcode.com/problems/task-scheduler/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "IX. Binary Search Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 55: Binary Search - On Sorted Array/List",
+                            "problems": [
+                                { "name": "35. Search Insert Position", "url": "https://leetcode.com/problems/search-insert-position/", "difficulty": "Easy" },
+                                { "name": "69. Sqrt(x)", "url": "https://leetcode.com/problems/sqrtx/", "difficulty": "Easy" },
+                                { "name": "74. Search a 2D Matrix", "url": "https://leetcode.com/problems/search-a-2d-matrix/", "difficulty": "Medium" },
+                                { "name": "278. First Bad Version", "url": "https://leetcode.com/problems/first-bad-version/", "difficulty": "Easy" },
+                                { "name": "374. Guess Number Higher or Lower", "url": "https://leetcode.com/problems/guess-number-higher-or-lower/", "difficulty": "Easy" },
+                                { "name": "540. Single Element in a Sorted Array", "url": "https://leetcode.com/problems/single-element-in-a-sorted-array/", "difficulty": "Medium" },
+                                { "name": "704. Binary Search", "url": "https://leetcode.com/problems/binary-search/", "difficulty": "Easy" },
+                                { "name": "1539. Kth Missing Positive Number", "url": "https://leetcode.com/problems/kth-missing-positive-number/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 56: Binary Search - Find Min/Max in Rotated Sorted Array",
+                            "problems": [
+                                { "name": "33. Search in Rotated Sorted Array", "url": "https://leetcode.com/problems/search-in-rotated-sorted-array/", "difficulty": "Medium" },
+                                { "name": "81. Search in Rotated Sorted Array II", "url": "https://leetcode.com/problems/search-in-rotated-sorted-array-ii/", "difficulty": "Medium" },
+                                { "name": "153. Find Minimum in Rotated Sorted Array", "url": "https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/", "difficulty": "Medium" },
+                                { "name": "162. Find Peak Element", "url": "https://leetcode.com/problems/find-peak-element/", "difficulty": "Medium" },
+                                { "name": "852. Peak Index in a Mountain Array", "url": "https://leetcode.com/problems/peak-index-in-a-mountain-array/", "difficulty": "Medium" },
+                                { "name": "1095. Find in Mountain Array", "url": "https://leetcode.com/problems/find-in-mountain-array/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 57: Binary Search - On Answer / Condition Function",
+                            "problems": [
+                                { "name": "410. Split Array Largest Sum", "url": "https://leetcode.com/problems/split-array-largest-sum/", "difficulty": "Hard" },
+                                { "name": "774. Minimize Max Distance to Gas Station", "url": "https://leetcode.com/problems/minimize-max-distance-to-gas-station/", "difficulty": "Hard" },
+                                { "name": "875. Koko Eating Bananas", "url": "https://leetcode.com/problems/koko-eating-bananas/", "difficulty": "Medium" },
+                                { "name": "1011. Capacity To Ship Packages Within D Days", "url": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/", "difficulty": "Medium" },
+                                { "name": "1482. Minimum Number of Days to Make m Bouquets", "url": "https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/", "difficulty": "Medium" },
+                                { "name": "1760. Minimum Limit of Balls in a Bag", "url": "https://leetcode.com/problems/minimum-limit-of-balls-in-a-bag/", "difficulty": "Medium" },
+                                { "name": "2064. Minimized Maximum of Products Distributed to Any Store", "url": "https://leetcode.com/problems/minimized-maximum-of-products-distributed-to-any-store/", "difficulty": "Medium" },
+                                { "name": "2226. Maximum Candies Allocated to K Children", "url": "https://leetcode.com/problems/maximum-candies-allocated-to-k-children/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 58: Binary Search - Find First/Last Occurrence",
+                            "problems": [
+                                { "name": "34. Find First and Last Position of Element in Sorted Array", "url": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/", "difficulty": "Medium" },
+                                { "name": "658. Find K Closest Elements", "url": "https://leetcode.com/problems/find-k-closest-elements/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 59: Binary Search - Median of Two Sorted Arrays",
+                            "problems": [
+                                { "name": "4. Median of Two Sorted Arrays", "url": "https://leetcode.com/problems/median-of-two-sorted-arrays/", "difficulty": "Hard" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "X. Stack Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 60: Stack - Valid Parentheses Matching",
+                            "problems": [
+                                { "name": "20. Valid Parentheses", "url": "https://leetcode.com/problems/valid-parentheses/", "difficulty": "Easy" },
+                                { "name": "32. Longest Valid Parentheses", "url": "https://leetcode.com/problems/longest-valid-parentheses/", "difficulty": "Hard" },
+                                { "name": "921. Minimum Add to Make Parentheses Valid", "url": "https://leetcode.com/problems/minimum-add-to-make-parentheses-valid/", "difficulty": "Medium" },
+                                { "name": "1249. Minimum Remove to Make Valid Parentheses", "url": "https://leetcode.com/problems/minimum-remove-to-make-valid-parentheses/", "difficulty": "Medium" },
+                                { "name": "1963. Minimum Number of Swaps to Make the String Balanced", "url": "https://leetcode.com/problems/minimum-number-of-swaps-to-make-the-string-balanced/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 61: Stack - Monotonic Stack",
+                            "problems": [
+                                { "name": "402. Remove K Digits", "url": "https://leetcode.com/problems/remove-k-digits/", "difficulty": "Medium" },
+                                { "name": "496. Next Greater Element I", "url": "https://leetcode.com/problems/next-greater-element-i/", "difficulty": "Easy" },
+                                { "name": "503. Next Greater Element II", "url": "https://leetcode.com/problems/next-greater-element-ii/", "difficulty": "Medium" },
+                                { "name": "739. Daily Temperatures", "url": "https://leetcode.com/problems/daily-temperatures/", "difficulty": "Medium" },
+                                { "name": "901. Online Stock Span", "url": "https://leetcode.com/problems/online-stock-span/", "difficulty": "Medium" },
+                                { "name": "907. Sum of Subarray Minimums", "url": "https://leetcode.com/problems/sum-of-subarray-minimums/", "difficulty": "Medium" },
+                                { "name": "962. Maximum Width Ramp", "url": "https://leetcode.com/problems/maximum-width-ramp/", "difficulty": "Medium" },
+                                { "name": "1475. Final Prices With a Special Discount in a Shop", "url": "https://leetcode.com/problems/final-prices-with-a-special-discount-in-a-shop/", "difficulty": "Easy" },
+                                { "name": "1673. Find the Most Competitive Subsequence", "url": "https://leetcode.com/problems/find-the-most-competitive-subsequence/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 62: Stack - Expression Evaluation (RPN/Infix)",
+                            "problems": [
+                                { "name": "150. Evaluate Reverse Polish Notation", "url": "https://leetcode.com/problems/evaluate-reverse-polish-notation/", "difficulty": "Medium" },
+                                { "name": "224. Basic Calculator", "url": "https://leetcode.com/problems/basic-calculator/", "difficulty": "Hard" },
+                                { "name": "227. Basic Calculator II", "url": "https://leetcode.com/problems/basic-calculator-ii/", "difficulty": "Medium" },
+                                { "name": "772. Basic Calculator III", "url": "https://leetcode.com/problems/basic-calculator-iii/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 63: Stack - Simulation / Backtracking Helper",
+                            "problems": [
+                                { "name": "71. Simplify Path", "url": "https://leetcode.com/problems/simplify-path/", "difficulty": "Medium" },
+                                { "name": "394. Decode String", "url": "https://leetcode.com/problems/decode-string/", "difficulty": "Medium" },
+                                { "name": "735. Asteroid Collision", "url": "https://leetcode.com/problems/asteroid-collision/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 64: Stack - Min Stack Design",
+                            "problems": [
+                                { "name": "155. Min Stack", "url": "https://leetcode.com/problems/min-stack/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 65: Stack - Largest Rectangle in Histogram",
+                            "problems": [
+                                { "name": "84. Largest Rectangle in Histogram", "url": "https://leetcode.com/problems/largest-rectangle-in-histogram/", "difficulty": "Hard" },
+                                { "name": "85. Maximal Rectangle", "url": "https://leetcode.com/problems/maximal-rectangle/", "difficulty": "Hard" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "XI. Bit Manipulation Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 66: Bitwise XOR - Finding Single/Missing Number",
+                            "problems": [
+                                { "name": "136. Single Number", "url": "https://leetcode.com/problems/single-number/", "difficulty": "Easy" },
+                                { "name": "137. Single Number II", "url": "https://leetcode.com/problems/single-number-ii/", "difficulty": "Medium" },
+                                { "name": "268. Missing Number", "url": "https://leetcode.com/problems/missing-number/", "difficulty": "Easy" },
+                                { "name": "389. Find the Difference", "url": "https://leetcode.com/problems/find-the-difference/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 67: Bitwise AND - Counting Set Bits (Hamming Weight)",
+                            "problems": [
+                                { "name": "191. Number of 1 Bits", "url": "https://leetcode.com/problems/number-of-1-bits/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 70: Bitwise DP - Counting Bits Optimization",
+                            "problems": [
+                                { "name": "338. Counting Bits", "url": "https://leetcode.com/problems/counting-bits/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 69: Bitwise Operations - Power of Two/Four Check",
+                            "problems": [
+                                { "name": "231. Power of Two", "url": "https://leetcode.com/problems/power-of-two/", "difficulty": "Easy" },
+                                { "name": "342. Power of Four", "url": "https://leetcode.com/problems/power-of-four/", "difficulty": "Easy" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "XII. Linked List Manipulation Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 71: Linked List - In-place Reversal",
+                            "problems": [
+                                { "name": "83. Remove Duplicates from Sorted List", "url": "https://leetcode.com/problems/remove-duplicates-from-sorted-list/", "difficulty": "Easy" },
+                                { "name": "92. Reverse Linked List II", "url": "https://leetcode.com/problems/reverse-linked-list-ii/", "difficulty": "Medium" },
+                                { "name": "206. Reverse Linked List", "url": "https://leetcode.com/problems/reverse-linked-list/", "difficulty": "Easy" },
+                                { "name": "25. Reverse Nodes in k-Group", "url": "https://leetcode.com/problems/reverse-nodes-in-k-group/", "difficulty": "Hard" },
+                                { "name": "234. Palindrome Linked List", "url": "https://leetcode.com/problems/palindrome-linked-list/", "difficulty": "Easy" },
+                                { "name": "82. Remove Duplicates from Sorted List II", "url": "https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 72: Linked List - Merging Two Sorted Lists",
+                            "problems": [
+                                { "name": "21. Merge Two Sorted Lists", "url": "https://leetcode.com/problems/merge-two-sorted-lists/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 73: Linked List - Addition of Numbers",
+                            "problems": [
+                                { "name": "2. Add Two Numbers", "url": "https://leetcode.com/problems/add-two-numbers/", "difficulty": "Medium" },
+                                { "name": "369. Plus One Linked List", "url": "https://leetcode.com/problems/plus-one-linked-list/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 74: Linked List - Intersection Detection",
+                            "problems": [
+                                { "name": "160. Intersection of Two Linked Lists", "url": "https://leetcode.com/problems/intersection-of-two-linked-lists/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 75: Linked List - Reordering / Partitioning",
+                            "problems": [
+                                { "name": "24. Swap Nodes in Pairs", "url": "https://leetcode.com/problems/swap-nodes-in-pairs/", "difficulty": "Medium" },
+                                { "name": "61. Rotate List", "url": "https://leetcode.com/problems/rotate-list/", "difficulty": "Medium" },
+                                { "name": "86. Partition List", "url": "https://leetcode.com/problems/partition-list/", "difficulty": "Medium" },
+                                { "name": "143. Reorder List", "url": "https://leetcode.com/problems/reorder-list/", "difficulty": "Medium" },
+                                { "name": "328. Odd Even Linked List", "url": "https://leetcode.com/problems/odd-even-linked-list/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "XIII. Array/Matrix Manipulation Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 76: Array/Matrix - In-place Rotation",
+                            "problems": [
+                                { "name": "48. Rotate Image", "url": "https://leetcode.com/problems/rotate-image/", "difficulty": "Medium" },
+                                { "name": "189. Rotate Array", "url": "https://leetcode.com/problems/rotate-array/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 77: Array/Matrix - Spiral Traversal",
+                            "problems": [
+                                { "name": "54. Spiral Matrix", "url": "https://leetcode.com/problems/spiral-matrix/", "difficulty": "Medium" },
+                                { "name": "885. Spiral Matrix III", "url": "https://leetcode.com/problems/spiral-matrix-iii/", "difficulty": "Medium" },
+                                { "name": "2326. Spiral Matrix IV", "url": "https://leetcode.com/problems/spiral-matrix-iv/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 78: Array/Matrix - Set Matrix Zeroes (In-place Marking)",
+                            "problems": [
+                                { "name": "73. Set Matrix Zeroes", "url": "https://leetcode.com/problems/set-matrix-zeroes/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 79: Array - Product Except Self (Prefix/Suffix Products)",
+                            "problems": [
+                                { "name": "238. Product of Array Except Self", "url": "https://leetcode.com/problems/product-of-array-except-self/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 80: Array - Plus One (Handling Carry)",
+                            "problems": [
+                                { "name": "66. Plus One", "url": "https://leetcode.com/problems/plus-one/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 81: Array - Merge Sorted Array (In-place from End)",
+                            "problems": [
+                                { "name": "88. Merge Sorted Array", "url": "https://leetcode.com/problems/merge-sorted-array/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 82: Array - Cyclic Sort",
+                            "problems": [
+                                { "name": "41. First Missing Positive", "url": "https://leetcode.com/problems/first-missing-positive/", "difficulty": "Hard" },
+                                { "name": "268. Missing Number", "url": "https://leetcode.com/problems/missing-number/", "difficulty": "Easy" },
+                                { "name": "287. Find the Duplicate Number", "url": "https://leetcode.com/problems/find-the-duplicate-number/", "difficulty": "Medium" },
+                                { "name": "442. Find All Duplicates in an Array", "url": "https://leetcode.com/problems/find-all-duplicates-in-an-array/", "difficulty": "Medium" },
+                                { "name": "448. Find All Numbers Disappeared in an Array", "url": "https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 83: Array - Kadane's Variant for Maximum Product",
+                            "problems": [
+                                { "name": "152. Maximum Product Subarray", "url": "https://leetcode.com/problems/maximum-product-subarray/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "XIV. String Manipulation Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 84: String - Palindrome Check (Two Pointers / Reverse)",
+                            "problems": [
+                                { "name": "9. Palindrome Number", "url": "https://leetcode.com/problems/palindrome-number/", "difficulty": "Easy" },
+                                { "name": "125. Valid Palindrome", "url": "https://leetcode.com/problems/valid-palindrome/", "difficulty": "Easy" },
+                                { "name": "680. Valid Palindrome II", "url": "https://leetcode.com/problems/valid-palindrome-ii/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 85: String - Anagram Check (Frequency Count/Sort)",
+                            "problems": [
+                                { "name": "49. Group Anagrams", "url": "https://leetcode.com/problems/group-anagrams/", "difficulty": "Medium" },
+                                { "name": "242. Valid Anagram", "url": "https://leetcode.com/problems/valid-anagram/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 86: String - Roman to Integer Conversion",
+                            "problems": [
+                                { "name": "13. Roman to Integer", "url": "https://leetcode.com/problems/roman-to-integer/", "difficulty": "Easy" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 87: String - String to Integer (atoi)",
+                            "problems": [
+                                { "name": "8. String to Integer (atoi)", "url": "https://leetcode.com/problems/string-to-integer-atoi/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 88: String - Multiply Strings (Manual Simulation)",
+                            "problems": [
+                                { "name": "43. Multiply Strings", "url": "https://leetcode.com/problems/multiply-strings/", "difficulty": "Medium" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 89: String Matching - Naive / KMP / Rabin-Karp",
+                            "problems": [
+                                { "name": "28. Find the Index of the First Occurrence in a String", "url": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/", "difficulty": "Easy" },
+                                { "name": "214. Shortest Palindrome", "url": "https://leetcode.com/problems/shortest-palindrome/", "difficulty": "Hard" },
+                                { "name": "686. Repeated String Match", "url": "https://leetcode.com/problems/repeated-string-match/", "difficulty": "Easy" },
+                                { "name": "796. Rotate String", "url": "https://leetcode.com/problems/rotate-string/", "difficulty": "Easy" },
+                                { "name": "3008. Find Beautiful Indices in the Given Array II", "url": "https://leetcode.com/problems/find-beautiful-indices-in-the-given-array-ii/", "difficulty": "Hard" }
+                            ]
+                        },
+                        {
+                            "name": "Pattern 90: String - Repeated Substring Pattern Detection",
+                            "problems": [
+                                { "name": "459. Repeated Substring Pattern", "url": "https://leetcode.com/problems/repeated-substring-pattern/", "difficulty": "Easy" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "category": "XV. Design Patterns",
+                    "patterns": [
+                        {
+                            "name": "Pattern 91: Design (General/Specific)",
+                            "problems": [
+                                { "name": "146. LRU Cache", "url": "https://leetcode.com/problems/lru-cache/", "difficulty": "Medium" },
+                                { "name": "155. Min Stack", "url": "https://leetcode.com/problems/min-stack/", "difficulty": "Medium" },
+                                { "name": "208. Implement Trie (Prefix Tree)", "url": "https://leetcode.com/problems/implement-trie-prefix-tree/", "difficulty": "Medium" },
+                                { "name": "211. Design Add and Search Words Data Structure", "url": "https://leetcode.com/problems/design-add-and-search-words-data-structure/", "difficulty": "Medium" },
+                                { "name": "225. Implement Stack using Queues", "url": "https://leetcode.com/problems/implement-stack-using-queues/", "difficulty": "Easy" },
+                                { "name": "232. Implement Queue using Stacks", "url": "https://leetcode.com/problems/implement-queue-using-stacks/", "difficulty": "Easy" },
+                                { "name": "251. Flatten 2D Vector", "url": "https://leetcode.com/problems/flatten-2d-vector/", "difficulty": "Medium" },
+                                { "name": "271. Encode and Decode Strings", "url": "https://leetcode.com/problems/encode-and-decode-strings/", "difficulty": "Medium" },
+                                { "name": "295. Find Median from Data Stream", "url": "https://leetcode.com/problems/find-median-from-data-stream/", "difficulty": "Hard" },
+                                { "name": "341. Flatten Nested List Iterator", "url": "https://leetcode.com/problems/flatten-nested-list-iterator/", "difficulty": "Medium" },
+                                { "name": "346. Moving Average from Data Stream", "url": "https://leetcode.com/problems/moving-average-from-data-stream/", "difficulty": "Easy" },
+                                { "name": "353. Design Snake Game", "url": "https://leetcode.com/problems/design-snake-game/", "difficulty": "Medium" },
+                                { "name": "359. Logger Rate Limiter", "url": "https://leetcode.com/problems/logger-rate-limiter/", "difficulty": "Easy" },
+                                { "name": "362. Design Hit Counter", "url": "https://leetcode.com/problems/design-hit-counter/", "difficulty": "Medium" },
+                                { "name": "379. Design Phone Directory", "url": "https://leetcode.com/problems/design-phone-directory/", "difficulty": "Medium" },
+                                { "name": "380. Insert Delete GetRandom O(1)", "url": "https://leetcode.com/problems/insert-delete-getrandom-o1/", "difficulty": "Medium" },
+                                { "name": "432. All O`one Data Structure", "url": "https://leetcode.com/problems/all-oone-data-structure/", "difficulty": "Hard" },
+                                { "name": "460. LFU Cache", "url": "https://leetcode.com/problems/lfu-cache/", "difficulty": "Hard" },
+                                { "name": "604. Design Compressed String Iterator", "url": "https://leetcode.com/problems/design-compressed-string-iterator/", "difficulty": "Easy" },
+                                { "name": "622. Design Circular Queue", "url": "https://leetcode.com/problems/design-circular-queue/", "difficulty": "Medium" },
+                                { "name": "641. Design Circular Deque", "url": "https://leetcode.com/problems/design-circular-deque/", "difficulty": "Medium" },
+                                { "name": "642. Design Search Autocomplete System", "url": "https://leetcode.com/problems/design-search-autocomplete-system/", "difficulty": "Hard" },
+                                { "name": "706. Design HashMap", "url": "https://leetcode.com/problems/design-hashmap/", "difficulty": "Easy" },
+                                { "name": "715. Range Module", "url": "https://leetcode.com/problems/range-module/", "difficulty": "Hard" },
+                                { "name": "900. RLE Iterator", "url": "https://leetcode.com/problems/rle-iterator/", "difficulty": "Medium" },
+                                { "name": "981. Time Based Key-Value Store", "url": "https://leetcode.com/problems/time-based-key-value-store/", "difficulty": "Medium" },
+                                { "name": "1146. Snapshot Array", "url": "https://leetcode.com/problems/snapshot-array/", "difficulty": "Medium" },
+                                { "name": "1348. Tweet Counts Per Frequency", "url": "https://leetcode.com/problems/tweet-counts-per-frequency/", "difficulty": "Medium" },
+                                { "name": "1352. Product of the Last K Numbers", "url": "https://leetcode.com/problems/product-of-the-last-k-numbers/", "difficulty": "Medium" },
+                                { "name": "1381. Design a Stack With Increment Operation", "url": "https://leetcode.com/problems/design-a-stack-with-increment-operation/", "difficulty": "Medium" },
+                                { "name": "1756. Design Most Recently Used Queue", "url": "https://leetcode.com/problems/design-most-recently-used-queue/", "difficulty": "Medium" },
+                                { "name": "2013. Detect Squares", "url": "https://leetcode.com/problems/detect-squares/", "difficulty": "Medium" },
+                                { "name": "2034. Stock Price Fluctuation", "url": "https://leetcode.com/problems/stock-price-fluctuation/", "difficulty": "Medium" },
+                                { "name": "2296. Design a Text Editor", "url": "https://leetcode.com/problems/design-a-text-editor/", "difficulty": "Hard" },
+                                { "name": "2336. Smallest Number in Infinite Set", "url": "https://leetcode.com/problems/smallest-number-in-infinite-set/", "difficulty": "Medium" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const appContainer = document.getElementById('app-container');
+            const searchInput = document.getElementById('search-input');
+            const filterControls = document.getElementById('filter-controls');
+            const themeToggle = document.getElementById('theme-toggle');
+
+            const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+            const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+            const problemStats = { total: 0, byDifficulty: { Easy: 0, Medium: 0, Hard: 0 }, nameToDifficultyMap: new Map() };
+            leetcodeData.forEach(cat => cat.patterns.forEach(pat => pat.problems.forEach(prob => {
+                problemStats.total++;
+                if(problemStats.byDifficulty[prob.difficulty] !== undefined) problemStats.byDifficulty[prob.difficulty]++;
+                problemStats.nameToDifficultyMap.set(prob.name, prob.difficulty);
+            })));
+
+            let state = {
+                searchTerm: '',
+                filter: 'all',
+                solvedProblems: new Set(JSON.parse(localStorage.getItem('solvedProblems')) || []),
+                theme: localStorage.getItem('theme') || 'dark',
+            };
+            
+            let progressChart = null;
+
+            function saveState() {
+                localStorage.setItem('solvedProblems', JSON.stringify(Array.from(state.solvedProblems)));
+            }
+
+            function applyTheme() {
+                const isDark = state.theme !== 'light';
+                document.documentElement.classList.toggle('light', !isDark);
+                document.documentElement.classList.toggle('dark', isDark);
+                themeToggle.innerHTML = isDark ? sunIcon : moonIcon;
+                
+                if(progressChart) {
+                    progressChart.destroy();
+                    progressChart = null;
+                }
+                renderApp({ preserveDetailsState: true });
+            }
+            
+            function renderDashboard() {
+                const dashboardContainer = document.getElementById('dashboard');
+                if (!dashboardContainer) return;
+                
+                const existingHTML = dashboardContainer.innerHTML;
+                const newHTML = `
+                    <div class="bg-[var(--bg-secondary)] p-4 rounded-lg shadow-xl animate-fade-in-up">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                            <div class="md:col-span-1 h-36 md:h-40 relative">
+                                <canvas id="progressPieChart"></canvas>
+                                <div id="chartCenterText" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"></div>
+                            </div>
+                            <div id="dashboard-stats" class="md:col-span-2"></div>
+                        </div>
+                    </div>
+                `;
+                
+                if (existingHTML.trim() === '') {
+                     dashboardContainer.innerHTML = newHTML;
+                }
+
+                const solvedCount = state.solvedProblems.size;
+                const percentage = problemStats.total > 0 ? ((solvedCount / problemStats.total) * 100) : 0;
+                const solvedCountsByDifficulty = { Easy: 0, Medium: 0, Hard: 0 };
+                state.solvedProblems.forEach(name => {
+                    const diff = problemStats.nameToDifficultyMap.get(name);
+                    if(diff) solvedCountsByDifficulty[diff]++;
+                });
+
+                document.getElementById('chartCenterText').innerHTML = `
+                    <span class="text-3xl font-bold text-[var(--text-primary)]">${Math.round(percentage)}%</span>
+                    <span class="text-sm text-[var(--text-muted)]">Complete</span>`;
+
+                document.getElementById('dashboard-stats').innerHTML = `
+                    <div class="space-y-3">
+                        ${['Easy', 'Medium', 'Hard'].map(diff => {
+                            const total = problemStats.byDifficulty[diff];
+                            const solved = solvedCountsByDifficulty[diff];
+                            const p = total > 0 ? (solved/total)*100 : 0;
+                            return `
+                            <div>
+                                <div class="flex justify-between mb-1 text-sm">
+                                    <span class="font-bold" style="color: var(--${diff.toLowerCase()}-color);">${diff.toUpperCase()}</span>
+                                    <span class="text-[var(--text-secondary)]">${solved} / ${total}</span>
+                                </div>
+                                <div class="w-full bg-[var(--bg-tertiary)] rounded-full h-2.5">
+                                    <div class="h-2.5 rounded-full" style="width: ${p}%; background-color: var(--${diff.toLowerCase()}-color);"></div>
+                                </div>
+                            </div>`
+                        }).join('')}
+                    </div>`;
+                
+                const chartCanvas = document.getElementById('progressPieChart');
+                if (!chartCanvas) return;
+                
+                const chartData = {
+                    datasets: [{
+                        data: [ solvedCountsByDifficulty.Easy, solvedCountsByDifficulty.Medium, solvedCountsByDifficulty.Hard, problemStats.total - solvedCount ],
+                        backgroundColor: [
+                            getComputedStyle(document.documentElement).getPropertyValue('--easy-color'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--medium-color'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--hard-color'),
+                            getComputedStyle(document.documentElement).getPropertyValue('--border-color')
+                        ],
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary'),
+                        borderWidth: 4,
+                        hoverOffset: 8,
+                    }]
+                };
+
+                if (progressChart) {
+                    progressChart.data.datasets[0].data = chartData.datasets[0].data;
+                    progressChart.update('none'); 
+                } else {
+                    const ctx = chartCanvas.getContext('2d');
+                    progressChart = new Chart(ctx, {
+                        type: 'doughnut', data: chartData,
+                        options: {
+                            responsive: true, maintainAspectRatio: false, cutout: '80%',
+                            animation: { animateScale: true, animateRotate: true },
+                            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                        }
+                    });
+                }
+            }
+            
+            function renderApp(options = {}) {
+                const { preserveDetailsState = false } = options;
+                const openStates = new Map();
+
+                if (preserveDetailsState) {
+                    document.querySelectorAll('#app-container details').forEach(detail => {
+                        const summaryEl = detail.querySelector('summary > div > span');
+                        if (summaryEl) openStates.set(summaryEl.textContent, detail.open);
+                    });
+                }
+                
+                renderDashboard();
+                
+                appContainer.innerHTML = '';
+                const searchTerm = state.searchTerm.toLowerCase();
+                
+                leetcodeData.forEach(categoryData => {
+                    const hasVisibleProblems = categoryData.patterns.some(pattern => {
+                        return pattern.problems.some(p => {
+                            const isSolved = state.solvedProblems.has(p.name);
+                            const matchesSearch = p.name.toLowerCase().includes(searchTerm);
+                            const matchesFilter = state.filter === 'all' || (state.filter === 'solved' && isSolved) || (state.filter === 'unsolved' && !isSolved);
+                            return matchesSearch && matchesFilter;
+                        });
+                    });
+
+                    if (!hasVisibleProblems) return;
+
+                    const categoryDetails = document.createElement('details');
+                    categoryDetails.className = 'category-wrapper';
+                    
+                    // ✨ This is the key change: No longer open by default.
+                    // categoryDetails.open = true; // This line has been removed.
+
+                    if (preserveDetailsState && openStates.has(categoryData.category)) {
+                        categoryDetails.open = openStates.get(categoryData.category);
+                    }
+
+                    const categorySummary = document.createElement('summary');
+                    categorySummary.className = "text-2xl font-bold text-[var(--text-primary)] py-2 flex justify-between items-center border-b-2 border-[var(--border-color)] mb-4";
+                    categorySummary.innerHTML = `<div class="flex justify-between items-center w-full"><span>${categoryData.category}</span><svg class="details-arrow w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></div>`;
+                    
+                    const patternsContainer = document.createElement('div');
+                    patternsContainer.className = 'space-y-4 pt-2 pl-4';
+                    
+                    categoryData.patterns.forEach(patternData => {
+                        const filteredProblems = patternData.problems.filter(p => {
+                            const isSolved = state.solvedProblems.has(p.name);
+                            const matchesSearch = p.name.toLowerCase().includes(searchTerm);
+                            const matchesFilter = (state.filter === 'all') || (state.filter === 'solved' && isSolved) || (state.filter === 'unsolved' && !isSolved);
+                            return matchesSearch && matchesFilter;
+                        });
+
+                        if (filteredProblems.length > 0) {
+                            const details = document.createElement('details');
+                            details.className = "bg-[var(--bg-secondary)] p-4 rounded-lg shadow-lg";
+                            
+                            if (preserveDetailsState && openStates.has(patternData.name)) {
+                                details.open = openStates.get(patternData.name);
+                            }
+
+                            const summary = document.createElement('summary');
+                            summary.className = "text-xl font-semibold text-[var(--text-secondary)]";
+                            summary.innerHTML = `<div class="flex justify-between items-center w-full"><span>${patternData.name}</span><svg class="details-arrow w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></div>`;
+                            
+                            const problemsGrid = document.createElement('div');
+                            problemsGrid.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4";
+                            filteredProblems.forEach((problem, index) => {
+                                const problemCard = document.createElement('div');
+                                problemCard.className = "flex items-center justify-between bg-[var(--bg-tertiary)] p-3 rounded-lg border border-transparent hover:border-[var(--accent-color)] transform hover:scale-[1.03] transition-all duration-300 animate-fade-in-up";
+                                problemCard.style.animationDelay = `${index * 30}ms`;
+                                
+                                const problemLink = document.createElement('a');
+                                problemLink.href = problem.url;
+                                problemLink.target = "_blank";
+                                problemLink.rel = "noopener noreferrer";
+                                problemLink.className = "flex-grow hover:text-[var(--accent-color)] overflow-hidden whitespace-nowrap text-ellipsis mr-2";
+                                problemLink.innerHTML = `<span class="font-mono text-sm text-[var(--text-muted)]">${problem.name.split('.')[0]}.</span> <span class="font-medium">${problem.name.substring(problem.name.indexOf('.') + 1).trim()}</span>`;
+                                
+                                const difficultyTag = document.createElement('span');
+                                let tagColorClass = '';
+                                switch (problem.difficulty) {
+                                    case 'Easy': tagColorClass = 'text-[var(--easy-color)] bg-green-900/50'; break;
+                                    case 'Medium': tagColorClass = 'text-[var(--medium-color)] bg-yellow-900/50'; break;
+                                    case 'Hard': tagColorClass = 'text-[var(--hard-color)] bg-red-900/50'; break;
+                                }
+                                difficultyTag.className = `text-xs font-bold mx-2 px-2.5 py-1 rounded-full flex-shrink-0 ${tagColorClass}`;
+                                difficultyTag.textContent = problem.difficulty;
+                                
+                                const solvedToggle = document.createElement('button');
+                                solvedToggle.className = 'p-1 flex-shrink-0';
+                                solvedToggle.innerHTML = state.solvedProblems.has(problem.name) ? `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--solved-color)]"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>` : `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-muted)]"><circle cx="12" cy="12" r="10"></circle></svg>`;
+                                
+                                solvedToggle.onclick = (e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    state.solvedProblems.has(problem.name) ? state.solvedProblems.delete(problem.name) : state.solvedProblems.add(problem.name);
+                                    saveState();
+                                    renderApp({ preserveDetailsState: true });
+                                };
+
+                                problemCard.append(problemLink, difficultyTag, solvedToggle);
+                                problemsGrid.appendChild(problemCard);
+                            });
+                            details.append(summary, problemsGrid);
+                            patternsContainer.appendChild(details);
+                        }
+                    });
+
+                    categoryDetails.append(categorySummary, patternsContainer);
+                    appContainer.appendChild(categoryDetails);
+                });
+
+                 if (appContainer.innerHTML.trim() === '') {
+                    appContainer.innerHTML = `<div class="text-center py-16 px-4"><h3 class="text-2xl font-bold text-[var(--text-primary)]">No problems found</h3></div>`;
+                }
+            }
+            
+            function setupEventListeners() {
+                searchInput.addEventListener('input', (e) => {
+                    state.searchTerm = e.target.value;
+                    renderApp({ preserveDetailsState: true });
+                });
+
+                filterControls.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        state.filter = e.target.dataset.filter;
+                        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        renderApp();
+                    }
+                });
+                
+                themeToggle.addEventListener('click', () => {
+                    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+                    saveState();
+                    applyTheme();
+                });
+            }
+
+            // Initial setup
+            document.querySelector(`.filter-btn[data-filter="${state.filter}"]`).classList.add('active');
+            applyTheme();
+            setupEventListeners();
+        });
+    </script>
+</body>
+</html>
